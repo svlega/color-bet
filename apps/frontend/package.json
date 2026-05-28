@@ -1,0 +1,28 @@
+{
+  "name": "@color-bet/frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@color-bet/shared-types": "workspace:*",
+    "@tanstack/react-query": "^5.37.1",
+    "@vanilla-extract/css": "^1.15.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1",
+    "socket.io-client": "^4.7.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vanilla-extract/vite-plugin": "^4.0.7",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

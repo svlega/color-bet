@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Unit tests (game-engine) ────────────────────────────────────────────────
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @color-bet/game-engine test
+
+  # ─── TypeScript type checking ────────────────────────────────────────────────
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @color-bet/backend lint
+      - run: pnpm --filter @color-bet/frontend lint
+
+  # ─── E2E tests ───────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: colorbet
+          POSTGRES_PASSWORD: colorbet
+          POSTGRES_DB: colorbet
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://colorbet:colorbet@localhost:5432/colorbet
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-secret
+      PORT: 3001
+      VITE_API_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @color-bet/backend db:migrate
+      - name: Start backend
+        run: pnpm --filter @color-bet/backend dev &
+      - name: Start frontend
+        run: pnpm --filter @color-bet/frontend dev &
+      - name: Wait for services
+        run: npx wait-on http://localhost:3001/health http://localhost:5173 --timeout 30000
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
